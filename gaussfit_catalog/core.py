@@ -8,7 +8,6 @@ import regions
 from astropy import wcs
 from astropy.stats import mad_std
 from astropy.utils.console import ProgressBar
-from astropy.table import Table, Column
 import pylab as pl
 import os
 import signal, sys, time
@@ -22,15 +21,17 @@ STDDEV_TO_FWHM = np.sqrt(8*np.log(2))
 
 def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
                      max_radius_in_beams=2,
+                     max_offset_in_beams=1,
                      background_estimator=np.nanmedian,
                      noise_estimator=lambda x: mad_std(x, ignore_nan=True),
                      savepath=None,
+                     prefix="",
                     ):
 
     fh = fits.open(fitsfile)
-    data = fh[0].data
+    data = fh[0].data.squeeze()
     header = fh[0].header
-    datawcs = wcs.WCS(header)
+    datawcs = wcs.WCS(header).celestial
     beam = Beam.from_fits_header(header)
     pixscale = wcs.utils.proj_plane_pixel_area(datawcs)**0.5 * u.deg
     bmmaj_px = (beam.major.to(u.deg) / pixscale).decompose()
@@ -67,8 +68,10 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
                                                        bmmaj_px*max_radius_in_beams/STDDEV_TO_FWHM),
                                            'y_stddev':(bmmaj_px/STDDEV_TO_FWHM*0.75,
                                                        bmmaj_px*max_radius_in_beams/STDDEV_TO_FWHM),
-                                           'x_mean':(sz/2-2, sz/2+2),
-                                           'y_mean':(sz/2-2, sz/2+2),
+                                           'x_mean':(sz/2-max_offset_in_beams*bmmaj_px/STDDEV_TO_FWHM,
+                                                     sz/2+max_offset_in_beams*bmmaj_px/STDDEV_TO_FWHM),
+                                           'y_mean':(sz/2-max_offset_in_beams*bmmaj_px/STDDEV_TO_FWHM,
+                                                     sz/2+max_offset_in_beams*bmmaj_px/STDDEV_TO_FWHM),
                                            'amplitude':(ampguess*0.9, ampguess*1.1)
                                           }
                                   )
@@ -79,7 +82,7 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
                                                 plot=savepath is not None,
                                                )
         sourcename = reg.meta['text'].strip('{}')
-        pl.savefig(os.path.join(savepath, '{0}.png'.format(sourcename)),
+        pl.savefig(os.path.join(savepath, '{0}{1}.png'.format(prefix, sourcename)),
                    bbox_inches='tight')
 
         if 'param_cov' not in fit_info:
@@ -142,24 +145,3 @@ def gaussfit_image(image, gaussian, weights=None,
         ax4.hist(residual[(residual!=0) & (image!=0)], bins=50)
     
     return fitted, fitter.fit_info, residualsquaredsum
-
-def data_to_table(fit_data):
-    names = fit_data.keys()
-    numnames = [int(nm[5:].split("_")[0]) for nm in names]
-    stripnames = [nm[5:] for nm in names]
-    stripnames = [fullname for nnm,fullname in sorted(zip(numnames,stripnames))]
-    names = [fullname for nnm,fullname in sorted(zip(numnames,names))]
-    namecol = Column(name='Name', data=stripnames)
-    colnames = ['amplitude', 'center_x', 'center_y', 'fwhm_x', 'fwhm_y', 'pa',
-                'chi2', 'chi2/n', 'e_amplitude', 'e_center_x', 'e_center_y',
-                'e_fwhm_x', 'e_fwhm_y', 'e_pa', 'success',]
-    columns = [Column(name=k, data=[fit_data[entry][k].value
-                                    if hasattr(fit_data[entry][k],'value')
-                                    else fit_data[entry][k]
-                                    for entry in names],
-                      unit=(fit_data[names[0]][k].unit
-                            if hasattr(fit_data[names[0]][k], 'unit')
-                            else None))
-               for k in colnames]
-
-    return Table([namecol]+columns)
