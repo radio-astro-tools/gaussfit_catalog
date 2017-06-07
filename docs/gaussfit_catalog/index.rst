@@ -1,10 +1,10 @@
 ****************
-Template package
+Gaussfit Catalog
 ****************
 
-This is the documentation for the affiliated package.
+This is the documentation for gaussfit_catalog
 
 Reference/API
 =============
 
-.. automodapi:: packagename
+.. automodapi:: gaussfit_catalog

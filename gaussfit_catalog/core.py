@@ -109,7 +109,7 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
         cutout_mask = mask.data.astype('bool')
 
         smaller_phot_reg = regions.CircleSkyRegion(center=reg.center,
-                                                   radius=beam.major/STDDEV_TO_FWHM)
+                                                   radius=beam.major/2.) #FWHM->HWHM
         smaller_pixreg = smaller_phot_reg.to_pixel(datawcs)
         smaller_mask = smaller_pixreg.to_mask()
         smaller_cutout = smaller_mask.cutout(data) * smaller_mask.data
@@ -121,7 +121,7 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
             inds.remove(ii)
             for ind in inds:
                 maskoutreg = regions.CircleSkyRegion(center=region_list[ind].center,
-                                                     radius=beam.major)
+                                                     radius=beam.major/2.) #FWHM->HWHM
                 mpixreg = maskoutreg.to_pixel(datawcs)
                 mmask = mpixreg.to_mask()
 
@@ -161,6 +161,8 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
                                                 plot=savepath is not None,
                                                )
         sourcename = reg.meta['text'].strip('{}')
+        bmarr = beam.as_kernel(pixscale=pixscale, x_size=sz, y_size=sz).array
+        pl.contour(bmarr, levels=[0.317*bmarr.max()], colors=['r'])
         pl.savefig(os.path.join(savepath, '{0}{1}.png'.format(prefix, sourcename)),
                    bbox_inches='tight')
 
