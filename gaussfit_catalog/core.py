@@ -34,6 +34,13 @@ def sub_bbox_slice(bbox1, bbox2):
     return (slice(y0, y0+dy), slice(x0, x0+dx),)
 
 def slice_bbox_from_bbox(bbox1, bbox2):
+    """
+    Utility tool. Given two bboxes in the same coordinates, give the views of
+    each box corresponding to the other.  For example, if you have an image
+    ``im`` and two overlapping cutouts from that image ``cutout1`` and
+    ``cutout2`` with bounding boxes ``bbox1`` and ``bbox2``, the returned views
+    from this function give the regions ``cutout1[view1] = cutout2[view2]``
+    """
 
     if bbox1.ixmin < bbox2.ixmin:
         blcx = bbox2.ixmin
@@ -82,6 +89,39 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
                      savepath=None,
                      prefix="",
                     ):
+    """
+    Given a FITS filename and a list of regions, fit a gaussian to each region
+    with an input guess based on the beam size.
+
+    Parameters
+    ----------
+    fitsfile : str
+        Name of the FITS file
+    region_list : list
+        List of regions (see https://github.com/astropy/regions/)
+    radius : angular size
+        The radius of the region around the region center to extract and
+        include in the fit
+    max_radius_in_beams : float
+        The maximum allowed source radius in units of beam major axis
+        (this is a limit passed to the fitter)
+    max_offset_in_beams : float
+        The maximum allowed offset of the source center from the guessed
+        position
+    background_estimator : function
+        A function to apply to the background pixels (those not within 1 beam
+        HWHM of the center) to estimate the background level.  The background
+        will be subtracted before fitting.
+    noise_estimator : function
+        Function to apply to the whole data set to determine the noise level
+        and therefore the appropriate per-pixel weight to get the correct
+        normalization for the covariance matrix.
+    savepath : str or None
+        If specified, plots will be made and saved to this directory using the
+        source name from the region metadata
+    prefix : str
+        The prefix to append to saved source names
+    """
 
     # need central coordinates of each object
     coords = coordinates.SkyCoord([reg.center for reg in region_list])
@@ -161,10 +201,14 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
                                                 plot=savepath is not None,
                                                )
         sourcename = reg.meta['text'].strip('{}')
-        bmarr = beam.as_kernel(pixscale=pixscale, x_size=sz, y_size=sz).array
-        pl.contour(bmarr, levels=[0.317*bmarr.max()], colors=['r'])
-        pl.savefig(os.path.join(savepath, '{0}{1}.png'.format(prefix, sourcename)),
-                   bbox_inches='tight')
+
+        if savepath is not None:
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore', UserWarning)
+                bmarr = beam.as_kernel(pixscale=pixscale, x_size=sz, y_size=sz).array
+            pl.contour(bmarr, levels=[0.317*bmarr.max()], colors=['r'])
+            pl.savefig(os.path.join(savepath, '{0}{1}.png'.format(prefix, sourcename)),
+                       bbox_inches='tight')
 
         if 'param_cov' not in fit_info:
             fit_info['param_cov'] = np.zeros([6,6])
