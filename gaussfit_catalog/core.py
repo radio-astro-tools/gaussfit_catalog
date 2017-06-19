@@ -243,6 +243,36 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
 
 def gaussfit_image(image, gaussian, weights=None,
                    fitter=fitting.LevMarLSQFitter(), plot=False):
+    """
+    Fit a gaussian to an image and optionally plot the data, the fitted
+    gaussian, and the residual.
+
+    Parameters
+    ----------
+    image : 2-dimensional array
+        The image to be fit.  Cannot contain any NaNs.  Should have zero
+        background, since the model (if it's a Gaussian model) does not include
+        a background.
+    gaussian : `astropy.modeling.Model`
+        An astropy model object with guesses included.  Given the name of this
+        function, it should be a `~astropy.models.Gaussian2D` model, but
+        technically it can be any model.
+    fitter : `astropy.modeling.fitting.Fitter`
+        A fitter instance.  Can be any of the optimizers, in principle, but it
+        needs to take keywords ``weight`` and ``maxiter``.
+    plot : bool
+        Make the "diagnostic plot" showing the image, the fitted image, the
+        residual, and the image with the fits contoured over it?
+
+    Returns
+    -------
+    fitted : `astropy.modeling.fitting.Fitter`
+        The fitter instance
+    fitter.fit_info : dict
+        The dictionary containing the ``fit_info`` from the fitter
+    residualsquaredsum : float
+        The sum of the squares of the residual, e.g., chi^2.
+    """
 
     yy, xx = np.mgrid[:image.shape[0], :image.shape[1]]
     
