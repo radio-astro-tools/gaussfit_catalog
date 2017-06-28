@@ -6,6 +6,7 @@ from radio_beam import Beam
 import regions
 from astropy import wcs
 from astropy import coordinates
+from astropy import log
 from astropy.io import fits
 from astropy.stats import mad_std
 from astropy.utils.console import ProgressBar
@@ -145,7 +146,12 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
         phot_reg = regions.CircleSkyRegion(center=reg.center, radius=radius)
         pixreg = phot_reg.to_pixel(datawcs)
         mask = pixreg.to_mask()
-        cutout = mask.cutout(data) * mask.data
+        mask_cutout = mask.cutout(data)
+        if mask_cutout is None:
+            log.warning("Skipping region {0} because it failed to produce a cutout."
+                        .format(reg))
+            continue
+        cutout = mask_cutout * mask.data
         cutout_mask = mask.data.astype('bool')
 
         smaller_phot_reg = regions.CircleSkyRegion(center=reg.center,
@@ -210,7 +216,7 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
             pl.savefig(os.path.join(savepath, '{0}{1}.png'.format(prefix, sourcename)),
                        bbox_inches='tight')
 
-        if 'param_cov' not in fit_info:
+        if 'param_cov' not in fit_info or fit_info['param_cov'] is None:
             fit_info['param_cov'] = np.zeros([6,6])
             success = False
         else:
