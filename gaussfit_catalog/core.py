@@ -210,7 +210,7 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
             pl.savefig(os.path.join(savepath, '{0}{1}.png'.format(prefix, sourcename)),
                        bbox_inches='tight')
 
-        if 'param_cov' not in fit_info:
+        if 'param_cov' not in fit_info or fit_info['param_cov'] is None:
             fit_info['param_cov'] = np.zeros([6,6])
             success = False
         else:
