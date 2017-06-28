@@ -148,7 +148,8 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
         mask = pixreg.to_mask()
         mask_cutout = mask.cutout(data)
         if mask_cutout is None:
-            log.warning("Skipping region {0} because it failed to produce a cutout.")
+            log.warning("Skipping region {0} because it failed to produce a cutout."
+                        .format(reg))
             continue
         cutout = mask_cutout * mask.data
         cutout_mask = mask.data.astype('bool')
