@@ -133,6 +133,7 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
     datawcs = wcs.WCS(header).celestial
     beam = Beam.from_fits_header(header)
     pixscale = wcs.utils.proj_plane_pixel_area(datawcs)**0.5 * u.deg
+    bmmin_px = (beam.minor.to(u.deg) / pixscale).decompose()
     bmmaj_px = (beam.major.to(u.deg) / pixscale).decompose()
 
     noise = noise_estimator(data)
@@ -189,9 +190,9 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
                                    y_mean=sz/2,
                                    x_stddev=bmmaj_px/STDDEV_TO_FWHM,
                                    y_stddev=bmmaj_px/STDDEV_TO_FWHM,
-                                   bounds={'x_stddev':(bmmaj_px/STDDEV_TO_FWHM*0.75,
+                                   bounds={'x_stddev':(bmmin_px/STDDEV_TO_FWHM*0.75,
                                                        bmmaj_px*max_radius_in_beams/STDDEV_TO_FWHM),
-                                           'y_stddev':(bmmaj_px/STDDEV_TO_FWHM*0.75,
+                                           'y_stddev':(bmmin_px/STDDEV_TO_FWHM*0.75,
                                                        bmmaj_px*max_radius_in_beams/STDDEV_TO_FWHM),
                                            'x_mean':(sz/2-max_offset_in_beams*bmmaj_px/STDDEV_TO_FWHM,
                                                      sz/2+max_offset_in_beams*bmmaj_px/STDDEV_TO_FWHM),
