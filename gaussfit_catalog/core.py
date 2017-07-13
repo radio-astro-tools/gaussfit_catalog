@@ -89,6 +89,7 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
                      noise_estimator=lambda x: mad_std(x, ignore_nan=True),
                      savepath=None,
                      prefix="",
+                     raise_for_failure=False,
                     ):
     """
     Given a FITS filename and a list of regions, fit a gaussian to each region
@@ -122,6 +123,8 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
         source name from the region metadata
     prefix : str
         The prefix to append to saved source names
+    raise_for_failure : bool
+        If the fit was not successful, raise an exception
     """
 
     # need central coordinates of each object
@@ -189,7 +192,8 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
                                    x_mean=sz/2,
                                    y_mean=sz/2,
                                    x_stddev=bmmaj_px/STDDEV_TO_FWHM,
-                                   y_stddev=bmmaj_px/STDDEV_TO_FWHM,
+                                   y_stddev=bmmin_px/STDDEV_TO_FWHM,
+                                   theta=beam.pa,
                                    bounds={'x_stddev':(bmmin_px/STDDEV_TO_FWHM*0.75,
                                                        bmmaj_px*max_radius_in_beams/STDDEV_TO_FWHM),
                                            'y_stddev':(bmmin_px/STDDEV_TO_FWHM*0.75,
@@ -202,11 +206,12 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
                                           }
                                   )
 
-        result, fit_info, chi2 = gaussfit_image(image=(cutout-background)*mask.data,
-                                                gaussian=p_init,
-                                                weights=1/noise**2,
-                                                plot=savepath is not None,
-                                               )
+        imtofit = np.nan_to_num((cutout-background)*mask.data)
+        result, fit_info, chi2, fitter = gaussfit_image(image=imtofit,
+                                                        gaussian=p_init,
+                                                        weights=1/noise**2,
+                                                        plot=savepath is not None,
+                                                       )
         sourcename = reg.meta['text'].strip('{}')
 
         if savepath is not None:
@@ -241,6 +246,9 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
                                 'e_pa': fit_info['param_cov'][5,5]**0.5 * u.deg,
                                 'success': success,
                                }
+
+        if raise_for_failure and not success:
+            raise ValueError("Fit failed.")
 
         pb.update(ii)
         signal.signal(signal.SIGINT, signal_handler)
@@ -315,4 +323,4 @@ def gaussfit_image(image, gaussian, weights=None,
         ax4.plot(fitted.x_mean, fitted.y_mean, 'w+')
         ax4.axis(axlims)
     
-    return fitted, fitter.fit_info, residualsquaredsum
+    return fitted, fitter.fit_info, residualsquaredsum, fitter
