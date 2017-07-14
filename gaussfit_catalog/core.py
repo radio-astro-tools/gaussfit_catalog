@@ -230,19 +230,41 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
 
         cx,cy = pixreg.bounding_box.ixmin+result.x_mean, pixreg.bounding_box.iymin+result.y_mean
         clon,clat = datawcs.wcs_pix2world(cx, cy, 0)
+
+        major,minor = (result.x_stddev * STDDEV_TO_FWHM * pixscale.to(u.arcsec),
+                       result.y_stddev * STDDEV_TO_FWHM * pixscale.to(u.arcsec))
+        majind, minind = 3,4
+        pa = (result.theta*u.rad).to(u.deg)
+        if minor > major:
+            major,minor = minor,major
+            majind,minind = minind,majind
+            pa += 90*u.deg
+
+        fitted_gaussian_as_beam = Beam(major=major, minor=minor, pa=pa)
+        try:
+            deconv_fit = fitted_gaussian_as_beam.deconvolve(beam)
+            deconv_major, deconv_minor, deconv_pa = (deconv_fit.major,
+                                                     deconv_fit.minor,
+                                                     deconv_fit.pa)
+        except ValueError:
+            deconv_major, deconv_minor, deconv_pa = np.nan, np.nan, np.nan
+
         fit_data[sourcename] = {'amplitude': result.amplitude,
                                 'center_x': float(clon)*u.deg,
                                 'center_y': float(clat)*u.deg,
-                                'fwhm_x': result.x_stddev * STDDEV_TO_FWHM * pixscale.to(u.arcsec),
-                                'fwhm_y': result.y_stddev * STDDEV_TO_FWHM * pixscale.to(u.arcsec),
-                                'pa': (result.theta*u.rad).to(u.deg),
+                                'fwhm_major': major,
+                                'fwhm_minor': minor,
+                                'pa': pa,
+                                'deconv_fwhm_major': deconv_major,
+                                'deconv_fwhm_minor': deconv_minor,
+                                'deconv_pa': deconv_pa,
                                 'chi2': chi2,
                                 'chi2/n': chi2/mask.data.sum(),
                                 'e_amplitude': fit_info['param_cov'][0,0]**0.5,
                                 'e_center_x': fit_info['param_cov'][1,1]**0.5*u.deg,
                                 'e_center_y': fit_info['param_cov'][2,2]**0.5*u.deg,
-                                'e_fwhm_x': fit_info['param_cov'][3,3]**0.5 * STDDEV_TO_FWHM * pixscale.to(u.arcsec),
-                                'e_fwhm_y': fit_info['param_cov'][4,4]**0.5 * STDDEV_TO_FWHM * pixscale.to(u.arcsec),
+                                'e_fwhm_major': fit_info['param_cov'][majind,majind]**0.5 * STDDEV_TO_FWHM * pixscale.to(u.arcsec),
+                                'e_fwhm_minor': fit_info['param_cov'][minind,minind]**0.5 * STDDEV_TO_FWHM * pixscale.to(u.arcsec),
                                 'e_pa': fit_info['param_cov'][5,5]**0.5 * u.deg,
                                 'success': success,
                                }
