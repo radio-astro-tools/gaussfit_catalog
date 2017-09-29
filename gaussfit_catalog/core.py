@@ -218,6 +218,7 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', UserWarning)
                 bmarr = beam.as_kernel(pixscale=pixscale, x_size=sz, y_size=sz).array
+            assert bmarr.max() > 0
             pl.contour(bmarr, levels=[0.317*bmarr.max()], colors=['r'])
             pl.savefig(os.path.join(savepath, '{0}{1}.png'.format(prefix, sourcename)),
                        bbox_inches='tight')
@@ -247,6 +248,7 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
                                                      deconv_fit.minor,
                                                      deconv_fit.pa)
         except ValueError:
+            print("Could not deconvolve {0} from {1}".format(beam.__repr__(), fitted_gaussian_as_beam.__repr__()))
             deconv_major, deconv_minor, deconv_pa = np.nan, np.nan, np.nan
 
         fit_data[sourcename] = {'amplitude': result.amplitude,
@@ -339,7 +341,10 @@ def gaussfit_image(image, gaussian, weights=None,
         im = ax4.imshow(image, cmap='viridis', origin='lower',
                         interpolation='nearest')
         vmin, vmax = im.get_clim()
-        ax4.contour(fitim, levels=np.array([0.00269, 0.0455, 0.317])*fitim.max(),
+        scalefactor = fitim.max()
+        if scalefactor < 0:
+            scalefactor = fitim.max() - fitim.min()
+        ax4.contour(fitim, levels=np.array([0.00269, 0.0455, 0.317])*scalefactor,
                     colors=['w']*4)
         axlims = ax4.axis()
         ax4.plot(fitted.x_mean, fitted.y_mean, 'w+')
