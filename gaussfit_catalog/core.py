@@ -269,6 +269,8 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
                                 'e_fwhm_minor': fit_info['param_cov'][minind,minind]**0.5 * STDDEV_TO_FWHM * pixscale.to(u.arcsec),
                                 'e_pa': fit_info['param_cov'][5,5]**0.5 * u.deg,
                                 'success': success,
+                                'ampguess': ampguess,
+                                'peak': mx,
                                }
 
         if raise_for_failure and not success:
