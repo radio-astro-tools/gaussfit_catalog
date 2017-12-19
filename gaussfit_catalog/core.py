@@ -223,8 +223,8 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
             pl.savefig(os.path.join(savepath, '{0}{1}.png'.format(prefix, sourcename)),
                        bbox_inches='tight')
 
-        if 'param_cov' not in fit_info or fit_info['param_cov'] is None:
-            fit_info['param_cov'] = np.zeros([6,6])
+        if 'cov_x' not in fit_info or fit_info['cov_x'] is None:
+            fit_info['cov_x'] = np.zeros([6,6])
             success = False
         else:
             success = True
@@ -262,15 +262,16 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
                                 'deconv_pa': deconv_pa,
                                 'chi2': chi2,
                                 'chi2/n': chi2/mask.data.sum(),
-                                'e_amplitude': fit_info['param_cov'][0,0]**0.5,
-                                'e_center_x': fit_info['param_cov'][1,1]**0.5*u.deg,
-                                'e_center_y': fit_info['param_cov'][2,2]**0.5*u.deg,
-                                'e_fwhm_major': fit_info['param_cov'][majind,majind]**0.5 * STDDEV_TO_FWHM * pixscale.to(u.arcsec),
-                                'e_fwhm_minor': fit_info['param_cov'][minind,minind]**0.5 * STDDEV_TO_FWHM * pixscale.to(u.arcsec),
-                                'e_pa': fit_info['param_cov'][5,5]**0.5 * u.deg,
+                                'e_amplitude': fit_info['cov_x'][0,0]**0.5,
+                                'e_center_x': fit_info['cov_x'][1,1]**0.5*u.deg,
+                                'e_center_y': fit_info['cov_x'][2,2]**0.5*u.deg,
+                                'e_fwhm_major': fit_info['cov_x'][majind,majind]**0.5 * STDDEV_TO_FWHM * pixscale.to(u.arcsec),
+                                'e_fwhm_minor': fit_info['cov_x'][minind,minind]**0.5 * STDDEV_TO_FWHM * pixscale.to(u.arcsec),
+                                'e_pa': fit_info['cov_x'][5,5]**0.5 * u.deg,
                                 'success': success,
                                 'ampguess': ampguess,
                                 'peak': mx,
+                                'fit_info': fit_info,
                                }
 
         if raise_for_failure and not success:
