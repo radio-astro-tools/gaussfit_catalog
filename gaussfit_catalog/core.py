@@ -141,6 +141,8 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
 
     noise = noise_estimator(data)
 
+    log.info("Noise estimate is {0} for file {1}".format(noise, fitsfile))
+
     fit_data = {}
 
     pb = ProgressBar(len(region_list))
@@ -170,8 +172,11 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
             inds = np.where(nearby_matches)[0].tolist()
             inds.remove(ii)
             for ind in inds:
-                maskoutreg = regions.CircleSkyRegion(center=region_list[ind].center,
-                                                     radius=beam.major/2.) #FWHM->HWHM
+                maskoutreg = regions.EllipseSkyRegion(center=region_list[ind].center,
+                                                      width=beam.major,
+                                                      height=beam.minor,
+                                                      angle=beam.pa+90*u.deg,
+                                                     )
                 mpixreg = maskoutreg.to_pixel(datawcs)
                 mmask = mpixreg.to_mask()
 
@@ -219,7 +224,11 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
                 warnings.simplefilter('ignore', UserWarning)
                 bmarr = beam.as_kernel(pixscale=pixscale, x_size=sz, y_size=sz).array
             assert bmarr.max() > 0
-            pl.contour(bmarr, levels=[0.317*bmarr.max()], colors=['r'])
+            bm_ellipse = beam.ellipse_to_plot(sz/2, sz/2., pixscale)
+            bm_ellipse.set_facecolor('none')
+            bm_ellipse.set_edgecolor('r')
+            pl.gca().add_patch(bm_ellipse)
+            #pl.contour(bmarr, levels=[0.317*bmarr.max()], colors=['r'])
             pl.savefig(os.path.join(savepath, '{0}{1}.png'.format(prefix, sourcename)),
                        bbox_inches='tight')
 
