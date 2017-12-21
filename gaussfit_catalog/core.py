@@ -89,6 +89,7 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
                      noise_estimator=lambda x: mad_std(x, ignore_nan=True),
                      savepath=None,
                      prefix="",
+                     covariance='param_cov',
                      raise_for_failure=False,
                     ):
     """
@@ -123,6 +124,12 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
         source name from the region metadata
     prefix : str
         The prefix to append to saved source names
+    covariance : 'param_cov' or 'cov_x'
+        Which covariance matrix should be used to estimate the parameter
+        errors?  ``param_cov`` uses the diagonal of the reduced-chi^2-scaled
+        covariance matrix to compute the parameter errors, while ``cov_x`` uses
+        the unscaled errors.  See http://arxiv.org/abs/1009.2755 for a
+        description, and criticism, of using the scaled covariance.
     raise_for_failure : bool
         If the fit was not successful, raise an exception
     """
@@ -232,8 +239,8 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
             pl.savefig(os.path.join(savepath, '{0}{1}.png'.format(prefix, sourcename)),
                        bbox_inches='tight')
 
-        if 'cov_x' not in fit_info or fit_info['cov_x'] is None:
-            fit_info['cov_x'] = np.zeros([6,6])
+        if covariance not in fit_info or fit_info[covariance] is None:
+            fit_info[covariance] = np.zeros([6,6])
             success = False
         else:
             success = True
@@ -271,12 +278,12 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
                                 'deconv_pa': deconv_pa,
                                 'chi2': chi2,
                                 'chi2/n': chi2/mask.data.sum(),
-                                'e_amplitude': fit_info['cov_x'][0,0]**0.5,
-                                'e_center_x': fit_info['cov_x'][1,1]**0.5*u.deg,
-                                'e_center_y': fit_info['cov_x'][2,2]**0.5*u.deg,
-                                'e_fwhm_major': fit_info['cov_x'][majind,majind]**0.5 * STDDEV_TO_FWHM * pixscale.to(u.arcsec),
-                                'e_fwhm_minor': fit_info['cov_x'][minind,minind]**0.5 * STDDEV_TO_FWHM * pixscale.to(u.arcsec),
-                                'e_pa': fit_info['cov_x'][5,5]**0.5 * u.deg,
+                                'e_amplitude': fit_info[covariance][0,0]**0.5,
+                                'e_center_x': fit_info[covariance][1,1]**0.5*pixscale,
+                                'e_center_y': fit_info[covariance][2,2]**0.5*pixscale,
+                                'e_fwhm_major': fit_info[covariance][majind,majind]**0.5 * STDDEV_TO_FWHM * pixscale.to(u.arcsec),
+                                'e_fwhm_minor': fit_info[covariance][minind,minind]**0.5 * STDDEV_TO_FWHM * pixscale.to(u.arcsec),
+                                'e_pa': fit_info[covariance][5,5]**0.5 * u.deg,
                                 'success': success,
                                 'ampguess': ampguess,
                                 'peak': mx,
