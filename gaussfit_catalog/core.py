@@ -366,7 +366,14 @@ def gaussfit_image(image, gaussian, weights=None,
         ax4.contour(fitim, levels=np.array([0.00269, 0.0455, 0.317])*scalefactor,
                     colors=['w']*4)
         axlims = ax4.axis()
-        ax4.plot(fitted.x_mean, fitted.y_mean, 'w+')
+        if hasattr(fitted, 'x_mean'):
+            ax4.plot(fitted.x_mean, fitted.y_mean, 'w+')
+        else:
+            # composite multigaussian case
+            for ii in range(fitted.n_submodels()):
+                ax4.plot(getattr(fitted, 'x_mean_{0}'.format(ii)),
+                         getattr(fitted, 'y_mean_{0}'.format(ii)),
+                         'w+')
         ax4.axis(axlims)
     
     return fitted, fitter.fit_info, residualsquaredsum, fitter
