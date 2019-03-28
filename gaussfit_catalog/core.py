@@ -230,7 +230,7 @@ def gaussfit_catalog(fitsfile, region_list, radius=1.0*u.arcsec,
             sourcename = reg.meta['label'].strip('{}')
         else:
             raise ValueError("Regions need to have names, either as 'text' or "
-                             "'label' entries.)
+                             "'label' entries.")
 
         if savepath is not None:
             with warnings.catch_warnings():
