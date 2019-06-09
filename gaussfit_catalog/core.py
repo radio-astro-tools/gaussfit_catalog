@@ -10,6 +10,7 @@ from astropy import log
 from astropy.io import fits
 from astropy.stats import mad_std
 from astropy.utils.console import ProgressBar
+from astropy.table import Table, Column
 import pylab as pl
 import os
 import signal, sys, time
@@ -339,7 +340,7 @@ def gaussfit_image(image, gaussian, weights=None,
     """
 
     yy, xx = np.mgrid[:image.shape[0], :image.shape[1]]
-    
+
     with warnings.catch_warnings():
         # Ignore model linearity warning from the fitter
         warnings.simplefilter('ignore')
@@ -381,5 +382,30 @@ def gaussfit_image(image, gaussian, weights=None,
                          getattr(fitted, 'y_mean_{0}'.format(ii)),
                          'w+')
         ax4.axis(axlims)
-    
+
     return fitted, fitter.fit_info, residualsquaredsum, fitter
+
+
+def gaussfits_to_table(fit_data):
+    """
+    Convert the Gaussian fit data structure to an astropy Table
+    """
+    names = fit_data.keys()
+    numnames = [ii for ii,nm in enumerate(names)]
+    stripnames = [nm for nm in names]
+    stripnames = [fullname for nnm,fullname in sorted(zip(numnames,stripnames))]
+    names = [fullname for nnm,fullname in sorted(zip(numnames,names))]
+    namecol = Column(name='Name', data=stripnames)
+    colnames = ['amplitude', 'center_x', 'center_y', 'fwhm_major', 'fwhm_minor', 'pa',
+                'chi2', 'chi2/n', 'e_amplitude', 'e_center_x', 'e_center_y',
+                'e_fwhm_major', 'e_fwhm_minor', 'e_pa', 'success',]
+    columns = [Column(name=k, data=[fit_data[entry][k].value
+                                    if hasattr(fit_data[entry][k],'value')
+                                    else fit_data[entry][k]
+                                    for entry in names],
+                      unit=(fit_data[names[0]][k].unit
+                            if hasattr(fit_data[names[0]][k], 'unit')
+                            else None))
+               for k in colnames]
+
+    return Table([namecol]+columns)
