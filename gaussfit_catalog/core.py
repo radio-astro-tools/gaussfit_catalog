@@ -386,7 +386,11 @@ def gaussfit_image(image, gaussian, weights=None,
     return fitted, fitter.fit_info, residualsquaredsum, fitter
 
 
-def gaussfits_to_table(fit_data):
+def gaussfits_to_table(fit_data, colnames=['amplitude', 'center_x', 'center_y', 'fwhm_major',
+                                           'fwhm_minor', 'pa', 'chi2', 'chi2/n', 'e_amplitude',
+                                           'e_center_x', 'e_center_y', 'e_fwhm_major',
+                                           'e_fwhm_minor', 'e_pa', 'success', 'deconv_fwhm_major',
+                                           'deconv_fwhm_minor', 'deconv_pa']):
     """
     Convert the Gaussian fit data structure to an astropy Table
     """
@@ -396,9 +400,7 @@ def gaussfits_to_table(fit_data):
     stripnames = [fullname for nnm,fullname in sorted(zip(numnames,stripnames))]
     names = [fullname for nnm,fullname in sorted(zip(numnames,names))]
     namecol = Column(name='Name', data=stripnames)
-    colnames = ['amplitude', 'center_x', 'center_y', 'fwhm_major', 'fwhm_minor', 'pa',
-                'chi2', 'chi2/n', 'e_amplitude', 'e_center_x', 'e_center_y',
-                'e_fwhm_major', 'e_fwhm_minor', 'e_pa', 'success',]
+
     columns = [Column(name=k, data=[fit_data[entry][k].value
                                     if hasattr(fit_data[entry][k],'value')
                                     else fit_data[entry][k]
